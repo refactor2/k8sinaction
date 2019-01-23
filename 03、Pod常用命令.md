@@ -11,6 +11,19 @@
 `kubectl get pod -l creation_method=manual`，筛选指定的label信息的pod  
 `kubectl get pod -l env`，筛选包含label信息的pod，不管label的值  
 label筛选pod可以支持`=`，`!=`，`in`，`not in`，`正则表达式`,也支持多个label同时满足，如：`creation_method=manual，env in (prod,debug)`  
+`kubectl describe pod netcorek8s-gpu`，会发现调度失败，因为没有node的label是 gpu: "true"  
+`kubectl get ns`，获取当前集群的namespaces  
+`kubectl get pod -n kube-system`，获取指定namespaces的pod，不指定默认default  
+`kubectl create namespace custom-namespace`，创建namespace
+`kubectl delete ns custom-namespace`，删除namespace，会自动删除此namespace下的pod  
+`kubectl create -f netcorek8s-manual.yml -n custom-namespace`，在指定的namespace中创建资源  
+`kubectl delete pod netcorek8s-gpu`，在指定的namespace中删除pod  
+`kubectl delete pod -l creation_method=manual`，在指定的namespace中删除指定label的pod 
+`kubectl delete pod --all`，在指定的namespace中删除所有pod  
+`kubectl delete all --all`, 在指定的namespace中删除所有pod，service，replicationcontroller等等  
+
+
+
 
 
 
