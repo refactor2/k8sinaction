@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: netcorek8s-manual
+spec:
+  containers:
+  - image: refactor2/netcorek8s:1.0
+    name: netcorek8s
+    ports:
+    - containerPort: 43300
+      protocol: TCP
