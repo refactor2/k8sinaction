@@ -53,4 +53,14 @@ Kubernetes通过liveness探针判断container是否存活，liveness探针包括
             port: 43300
           initialDelaySeconds: 15
         ```
-2. ReplicationController
+
+2、 ReplicationController
+--
+ReplicationController有三个重要部分：
+  * label selector，ReplicationController选中那些pod
+  * replicas count，保证多少个副本在运行
+  * pod template，用来创建新pod的模板  
+
+在创建ReplicationController时，可以不指定label selector，Kubernetes会从pod template中获取  
+
+
