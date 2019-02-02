@@ -66,7 +66,7 @@ Kubernetes通过liveness探针判断container是否存活，liveness探针包括
   2. 在创建ReplicationController时，可以不指定label selector，Kubernetes会从pod template中获取  
 
   3. `kubectl get rc`，获取ReplicationController的信息，如图：
-      * ![kubectl-get-rc](https://images.gitee.com/uploads/images/2019/0123/075009_00be8a3d_5849.png "02、进入VM验证应用.png")  
+      * ![kubectl-get-rc](https://images.gitee.com/uploads/images/2019/0202/173537_99c11aed_5849.png "04、getrc.png") 
       * DESIRED：期望pod数量  
       * CURRENT：目前pod数量  
       * READY：准备好的pod数量，指readiness探针检查正常的pod  
@@ -86,7 +86,54 @@ Kubernetes通过liveness探针判断container是否存活，liveness探针包括
 
   8. 当删除一个ReplicationController时，属于这个ReplicationController的pod也会被删除，可以通过指定--cascade=false来保留pod，`kubectl delete rc netcorek8src --cascade=false`  
 
+3、ReplicaSet
+--
+  1. ReplicaSet的功能类似与ReplicationController，比ReplicationController功能更强大，用于替换ReplicationController，后面ReplicationController会被废弃。一般情况下，我们并不会直接操作ReplicationController或ReplicaSet，而是通过Deployment部署  
 
+  2.  ReplicaSet在pod选择的时候，可以支持更多选择：
+      *  in，label的value必须是指定的values中的一个
+      * not in
+      * exists，lable中包含指定的key，不管value是什么
+      * doesnotexist
+
+  3. 如果指定了多个表达式，所有表达式必须都是true才会匹配到pod。如同时指定了`matchLabels` 和`matchExpressions`时，必须全部满足，这样的pod才会被选择  
+
+  4. 删除ReplicaSet时，同ReplicationController一样，也会删除被选择的pod
+
+4、DaemonSet
+--
+  1. DaemonSet适用于需要在每个node节点上都部署一个pod，即每个node节点有且只有一个pod。通常跑一些系统级别的pod，如日志收集，资源监控  
+
+  2. DaemonSet可以指定只部署在指定label的node节点上，通过node selector  
+
+  3. 目前node节点可以被设置成unschedulable，但是DaemonSet还是会部署到pod到node上，因为DaemonSet部署pod是不通过调度器  
+
+5、Job
+--
+  1. 运行pod，执行一次性任务，任务完成后，pod停止  
+
+  2. 实战，创建一个一次执行的Job
+      * 创建一个Dockerfile，内容如下：  
+          ```
+          FROM busybox
+          ENTRYPOINT echo "$(date) Batch job starting"; sleep 120; echo "$(date) Finished succesfully"
+          ```
+      * `docker build -t refactor2/batch-job .`  
+        `docker login --username=refactor2`    
+       `docker push refactor2/batch-job`
+      * `kubectl create -f 04、batch-job.yml`，yml文件里没有指定标签选择器，会从pod模版里自动生成。restartPolicy，重启策略默认是Always，Job需指定成OnFailure 或 Never  
+      * `kubectl get job`
+      * `kubectl get pod -a`
+
+    3. 在Job里的几个配置：
+       * completions，完成pod的数量
+       * parallelism，同时运行pod的数量
+       * activeDeadlineSeconds，指定pod最长可运行的时间，如果超过这个时间，则被认为job执行失败
+       * backoffLimit，job运行失败后，最大重试几次
+    
+  4. Job在运行过程中，还可以通过命令`kubectl scale job batch-job --replicas 3`改变并行度
+
+  5. 创建CronJob，让pod在指定的时间点，或周期性执行， `kubectl create -f 04、cronjob.yaml`
 
 
 
