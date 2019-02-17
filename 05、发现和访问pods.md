@@ -20,7 +20,8 @@ Kubernetes通过暴露Services来访问Services后面的pods，可以通过kubec
   1. 通过环境变量
       * 当一个pod启动时，Kubernetes会将当时已经存在的service初始化一系列的环境变量到pod里
          * `kubectl delete pod -l apprs=netcorek8s`，先删除在netcorek8ssvc服务创建之前的pod，由ReplicaSet重建pod
-         * `kubectl exec netcorek8srs-6grmm env`，在pod里执行`env`命令，如图：![05、podenv.png](https://images.gitee.com/uploads/images/2019/0217/003407_e9b2363b_5849.png "05、podenv.png")
+         * `kubectl exec netcorek8srs-6grmm env`，在pod里执行`env`命令，如图：  
+         ![05、podenv.png](https://images.gitee.com/uploads/images/2019/0217/003407_e9b2363b_5849.png "05、podenv.png")
          * 会发现存在：NETCOREK8SSVC_SERVICE_HOST和NETCOREK8SSVC_SERVICE_PORT
 
   2. 通过DNS
@@ -31,6 +32,83 @@ Kubernetes通过暴露Services来访问Services后面的pods，可以通过kubec
         * curl http://netcorek8ssvc.default:13300/api/values
         * curl http://netcorek8ssvc:13300/api/values
       * `kubectl exec netcorek8srs-4djwf -it bash`，进入pod里
-        * 执行`cat /etc/resolv.conf`，如图：![05、dns.png](https://images.gitee.com/uploads/images/2019/0217/003318_25c7279d_5849.png "05、dns.png")
+        * 执行`cat /etc/resolv.conf`，如图：  
+        ![05、dns.png](https://images.gitee.com/uploads/images/2019/0217/003318_25c7279d_5849.png "05、dns.png")
         * 执行`ping`，会发现ping不通，这是因为service的ClusterIP是一个虚IP，只有和service的端口一起使用才能访问
       * client通过dns获取到服务IP后，如果服务不是用的默认端口（如http的80端口），则仍需要通过环境变量获取到端口
+
+在集群内部访问外部服务
+  1. 当访问service时，service会随机选中一个后面的pod提供服务，这是通过service endpoints实现的
+      * `kubectl describe svc netcorek8ssvc`，如图：  
+      ![05、endpoints.png](https://images.gitee.com/uploads/images/2019/0217/175852_610b2929_5849.png "05、endpoints.png")
+      * `kubectl get endpoints netcorek8ssvc`
+  2. 当需要访问的服务不在集群内部时，可以手动创建service和endpoints
+      * endpoints  
+        ```
+        apiVersion: v1
+        kind: Endpoints
+        metadata:
+          name: external-service
+        subsets:
+          - addresses:
+            - ip: 11.11.11.11
+            - ip: 22.22.22.22
+            ports:
+            - port: 80 
+        ```
+      * service  
+        ```
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: external-service
+        spec:
+          ports:
+          - port: 80
+        ```
+  3. 可以为外部服务的提供一个别名，需要指定service的type为ExternalName
+      * service
+        ```
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: external-service
+        spec:
+          type: ExternalName
+          externalName: api.baidu.com
+          ports:
+          - port: 80
+        ```
+
+暴露服务到集群外部，让外部客户端可以访问  
+  1. 使用NodePort service，指定service的type为NodePort
+      * `kubectl create -f 05、netcorek8s-svc-nodeport.yml`，创建了一个集群内部可访问的端口13300，要转发pod的端口为43300，node上暴露的端口为32000，node上暴露的端口取值范围为：30000-32767，如图：  
+      ![05、nodeport.png](https://images.gitee.com/uploads/images/2019/0217/175905_4f15c425_5849.png "05、nodeport.png")
+      * 使用nodeport的坏处，当访问的node挂掉后，则不能访问对应的service了
+      * 使用nodeport的转发机制：当集群外client访问node的ip和端口时，nodeport会将请求转发到对应的service上，然后由service在转发到对应的pod上
+      * 创建完之后，可以通过如下方式访问
+        * 在集群内部，curl -s http://10.96.71.111:13300/api/values
+        * 在集群外部，curl -s http://192.168.99.130:32000/api/values， 其中 192.168.99.130为minikube ip
+  2. 使用外部的load balancer，指定service的type为LoadBalancer
+      * load balancer是基于NodePort做的，在NodePort上做了一个负载均衡，这个load balancer一般由像相应的云厂商提供，minikube不支持，但是仍然可以通过nodeport的方式访问
+      * `kubectl create -f 05、netcorek8s-svc-loadbalancer.yml`，如通过curl -s http://192.168.99.130:32001/api/values  访问
+
+使用Ingress暴露服务到集群外部，让外部客户端可以访问 
+  1. 使用Ingress，可以将多个服务一起暴露出来，类似与nginx做代理。Ingress操作在HTTP7层协议上，可以提供基于cookie的会话保持，而service不可以
+  2. minikube使用ingress是通过add-on的方式，查看目前已启用的add-on，`minikube addons list`，可以通过`minikube addons enable ingress`启用ingress
+  3. `kubectl create -f 05、netcorek8s-ingress.yml`，将域名netcorek8s.refactor.com的所有流量转发到netcorek8ssvc-nodeport service上
+      * `kubectl get ingress`获取到IP地址为10.0.2.15，端口为80
+      * `minikube ssh`，登录到VM里，`sudo vi /etc/hosts`，编辑/etc/hosts文件，添加host：`10.0.2.15  netcorek8s.refactor.com`
+      * curl -s http://netcorek8s.refactor.com/api/values，  如图：  
+      ![05、ingresstest.png](https://images.gitee.com/uploads/images/2019/0217/175937_c4386efe_5849.png "05、ingresstest.png")
+  4. client访问http://netcorek8s.refactor.com/api/values时，先去找netcorek8s.refactor.com对应的IP，然后向这个IP发送消息（携带header，包括Host:etcorek8s.refactor.com），被Ingress Controller接收，然后由Ingress Controller随机选择一个pod进行服务。注意Ingress并不会将请求转发给service，Ingress使用service主要是为了获取service endpoint，然后获取到pod列表
+  5. 使用Ingress处理TLS请求
+      * 当client打开一个TLS请求到Ingress Controller时，Ingress Controller处理这个加密链接。client和Ingress Controller的通信是加密的，但是Ingress Controller和pod之间的通信不是加密的
+      * 生成私钥和证书
+        * `openssl genrsa -out ingresstls.key 2048`
+        * `openssl req -new -x509 -key ingresstls.key -out ingresstls.cert -days 360 -subj /CN=netcorek8s.refactor.com`
+      * 在集群里创建secret，`kubectl create secret tls tls-secret --cert=ingresstls.cert --key=ingresstls.key`
+      * `kubectl apply -f 05、netcorek8s-ingress-tls.yml`
+      * curl -k -v https://netcorek8s.refactor.com/api/values， 如图：  
+      ![05、ingresstlstest.png](https://images.gitee.com/uploads/images/2019/0217/175953_0268f9eb_5849.png "05、ingresstlstest.png")
+
