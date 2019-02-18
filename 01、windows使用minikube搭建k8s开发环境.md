@@ -30,11 +30,12 @@
 5、排错指南
 -- 
 * `minikube start`启动，Error restarting cluster:  restarting kube-proxy: waiting for kube-proxy to be up for configmap update: timed out waiting for the condition
-    * 方案一：  
+    * 方案一，会清除已创建的数据：  
         * `minikube delete`  
         * `minikube start`  
     * 方案二： 
         * `minikube start`
         * `minikube ssh` 进入minikube VM
         * `ifconfig` 获取minikube VM IP地址，类似与192.168.xx.x，记住IP地址，exit退出minikube VM
+        * `minikube stop`
         * `minikube start --registry-mirror=http://f1361db2.m.daocloud.io --kubernetes-version v1.10.0 --cpus 2 --memory 4096 --docker-env HTTP_PROXY=http://192.168.99.115:8118 --docker-env HTTPS_PROXY=http://192.168.99.115:8118 --docker-env NO_PROXY=127.0.0.1/24`

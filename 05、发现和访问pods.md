@@ -112,3 +112,6 @@ Kubernetes通过暴露Services来访问Services后面的pods，可以通过kubec
       * curl -k -v https://netcorek8s.refactor.com/api/values， 如图：  
       ![05、ingresstlstest.png](https://images.gitee.com/uploads/images/2019/0217/175953_0268f9eb_5849.png "05、ingresstlstest.png")
 
+readiness probes
+  1. service后端的pod可能需要时间初始化，才能接受外部请求。这时需要判断pod是否准备好接受外部请求了，类似与liveness probes，Kubernetes提供了readiness probes。readiness 探针也包括三种：http get，tcp socket，exec
+  2. 当pod里的container启动后，Kubernetes可以配置等一定的时间后，周期性的向readiness探针发送请求。如果readiness探针连续几次（可配置）返回失败，则将这个pod从service  endpoints里移除，如果返回成功，则再将pod加入到service  endpoints
