@@ -116,17 +116,17 @@ readiness probes
   3. liveness探针，通过杀掉不健康的container，重启一个新的pod来保证可用。而readiness探针是保证只有准备好的pod才会提供服务，它在container启动时和已经运行很长时间时都很有用
   4. 实例：  
       * `kubectl apply -f 05、netcorek8s-rs-readiness.yml`，为名为netcorek8srs的ReplicaSet添加readiness，`kubectl delete pod -l apprs=netcorek8s`，删除以前pod，让ReplicaSet重建pod
-      * `kubectl describe svc netcorek8ssvc-nodeport`，`kubecrl describe rs netcorek8srs`，你会发现执行一段时间后，所有的pod都会变成不可用的状态
+      * `kubectl describe svc netcorek8ssvc-nodeport`，`kubectl describe rs netcorek8srs`，你会发现执行一段时间后，所有的pod都会变成不可用的状态
   5. 在生成环境，一定要使用readiness探针
 
 headless service，设置clusterIP为None，客户端可以找到service后面所有的pod ip。当使用DNS查找headless service时，会返回service后面所有的pod ip
   1. 实例：
-      * `kubectl create -f 05、netcorek8s-svc-headless.yml`，创建一个名为netcorek8ssvc-headless的service，`kubectl get netcorek8ssvc-headless`，`kubectl describe svc netcorek8ssvc-headless`，刚开始创建成功后，会有endpoints，过一会endpoints会为空，这是因为readiness探针起作用了
+      * `kubectl create -f 05、netcorek8s-svc-headless.yml`，创建一个名为netcorek8ssvc-headless的service，`kubectl get svc netcorek8ssvc-headless`，`kubectl describe svc netcorek8ssvc-headless`，刚开始创建成功后，会有endpoints，过一会endpoints会为空，这是因为readiness探针起作用了
       * `kubectl apply -f 04、netcorek8s-rs.yml`，更新netcorek8srs定义，`kubectl delete pod -l apprs=netcorek8s`，删除以前pod，让ReplicaSet重建pod，还原readiness的影响，这是会发现endpoints会一直有值
   2. 通过DNS获取到所有的pod ip
       * 由于netcorek8s的容器镜像里没有nslookup命令，需要在集群里创建一个临时pod，可以在创建的pod里执行nslookup命令，这里选择的镜像是tutum/dnsutils
       * `kubectl run dnsutils --image=tutum/dnsutils --generator=run-pod/v1 --command -- sleep infinity`，创建一个名为dnsutils的临时pod，执行一个一直休眠的命令，保持pod的运行。`--generator=run-pod/v1`是指直接创建pod，而不是通过ReplicationController来创建
-      * `kubectl exec dnsutils nslookup netcorek8ssvc-headless`
+      * `kubectl exec dnsutils -- nslookup netcorek8ssvc-headless`
   3. 客户端可以通过DNS name，像访问正常service一样，访问headless service，但是headless service里，DNS直接返回的所有pod ip，客户端是直接连接到pod，而不是通过service代理
   4. headless service依然为后面的pods提供负载均衡功能，这是通过DNS round-robin机制实现的，而不是通过service代理
 
