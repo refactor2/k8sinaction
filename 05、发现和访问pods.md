@@ -1,5 +1,3 @@
-1、Services
---
 Kubernetes通过暴露Services来访问Services后面的pods，可以通过kubectl expose来暴露一个Services，也可以通过yml创建   
   1. 创建一个名为netcorek8ssvc的Services，对外监听13300端口，向容器43300端口转发，选择标签apprs: netcorek8s的pod，`kubectl create -f 05、netcorek8s-svc.yml`  
   2. `kubectl get svc`，得到刚创建的netcorek8ssvc的服务IP为`10.106.70.60`，如图：
@@ -133,4 +131,11 @@ headless service，设置clusterIP为None，客户端可以找到service后面�
   4. headless service依然为后面的pods提供负载均衡功能，这是通过DNS round-robin机制实现的，而不是通过service代理
 
 关于service的排错指南
-  1. 
+  1. 确认是集群内部访问的service
+  2. 不要ping service来检查service是否通，因为service的集群内IP是虚IP，一直ping不通
+  3. 如果使用了readiness探针，须确保探针返回成功，否则pod不会放在service endpoint
+  4. 确认pod是否在service里，可以通过`kubectl get endpoints`检查
+  5. 如果通过DNS不能访问，可以看下直接通过cluster IP访问试下
+  6. 检查连接service的端口是port，而不是targetPort
+  7. 直接连接pod的ip和端口，保证pod可以访问
+  8. 如果通过pod的ip和端口不能访问，检查应用是不是只绑定了localhost

@@ -13,7 +13,7 @@
 3、启动minikube&验证
 --
 * 用管理员启动cmd，执行命令：    
-`minikube start --registry-mirror=minikube start --registry-mirror=https://registry.docker-cn.com --kubernetes-version v1.10.0 --cpus 2 --memory 4096`    
+`minikube start --registry-mirror=https://registry.docker-cn.com --kubernetes-version v1.10.0 --cpus 2 --memory 4096`    
 注意需要指定registry-mirror，避免被墙
 * 命令执行过程中，需要等一段时间，可以查看执行进度，如图:  
 ![minikubestart.png](https://images.gitee.com/uploads/images/2019/0122/170754_38f09a3e_5849.png "minikubestart.png")
