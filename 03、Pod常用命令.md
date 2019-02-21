@@ -21,6 +21,7 @@ label筛选pod可以支持`=`，`!=`，`in`，`not in`，`正则表达式`,也�
 `kubectl delete pod -l creation_method=manual`，在指定的namespace中删除指定label的pod  
 `kubectl delete pod --all`，在指定的namespace中删除所有pod  
 `kubectl delete all --all`, 在指定的namespace中删除所有pod，service，replicationcontroller等等  
+`kubectl delete pod fortunetest1 fortune --grace-period=0 --force`，强制删除pod
 
 
 
