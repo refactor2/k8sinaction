@@ -117,3 +117,12 @@ PersistentVolumes，PersistentVolumeClaims
           * Recycle，当pvc删除的时候，会删除volume里的数据，其他pvc可以再次绑定
           * Delete，当pvc删除的时候，会删除volume里的数据，也会删除pv资源
       * 可以随时改变pv的回收策略，如修改persistentVolumeReclaimPolicy为Delete，`kubectl apply -f 06、mongodb-pv-hostpath.yml`应用
+
+StorageClass
+  * PersistentVolumes可以隐藏开发人员对底层的存储，但是需要运维人员提前定义好。Kubernetes提供了一个更简便的方式。运维人员只需提前准备好PersistentVolume provisioner和定义好一个或多个StorageClass，开发人员在PVC里引用StorageClass，由Kubernetes根据StorageClass自动创建PersistentVolumes
+  * Kubernetes为云厂商默认提供了provisioner，运维人员不用自己创建provisioners，但是如果自己部署Kubernetes集群，则需要提供provisioner，一般采用nfs
+  * 实例
+      * `kubectl create -f 06、storageclass-fast-hostpath.yml`，创建一个名为fast的StorageClass，使用k8s.io/minikube-hostpath provisioner
+      * `kubectl create -f 06、mongodb-pvc-sc.yml`，创建一个pvc，绑定fast StorageClass
+      * 
+      
