@@ -16,7 +16,7 @@ emptyDir
   * 实例：
       * 实现效果，一个pod里有两个容器，一个容器使用命令`fortune`(这个命令每次执行会返回一个英文谚语)往自己的文件`/var/htdocs/index.html`写入一段话，另一个容器使用nginx加载目录下的`/usr/share/nginx/html`html文件
       * 准备脚本，fortuneloop.sh，需注意在windows上拷贝代码保存为文件，可能会导致sh文件不执行，导致容器启动失败。进入pod里调试发现，在执行fortuneloop.sh脚本时，提示： bad interpreter: No such file or directory。这是因为windows和linux系统编码格式不同，在windows系统中编辑的.sh文件可能有不可见字符，在Linux系统下执行会报以上异常信息。 可以在linux系统上新建文件，拷贝代码。如图：  
-      ![05、ingresstlstest.png](https://images.gitee.com/uploads/images/2019/0217/175953_0268f9eb_5849.png "05、ingresstlstest.png")
+      ![06、windows不可见字符.png](https://images.gitee.com/uploads/images/2019/0222/221519_7f1fbc4e_5849.png "06、windows不可见字符.png")
         ```
         #!/bin/bash
         trap "exit" SIGINT
@@ -74,7 +74,7 @@ gitRepo
  hostpath
    * hostpath指定pod所在的node节点的一个目录，挂载到容器内。在同一个node节点上的pod，如果挂载了，都可以访问。不像gitRepo和emptyDir一样，pod删除后，如果pod仍被部署在同一个node上，新的pod依然可以访问上一个pod记录的数据。如果Kubernetes集群上有多个node节点，使用hostpath需要注意
    * `kubectl describe pod kube-addon-manager-minikube -n kube-system`，可以看到，kube-addon-manager-minikube挂载了两个hostpath，一个名称为addons(路径/etc/kubernetes/)，一个名称为kubeconfig(路径/var/lib/minikube/)，如图：  
-   ![05、ingresstlstest.png](https://images.gitee.com/uploads/images/2019/0217/175953_0268f9eb_5849.png "05、ingresstlstest.png")
+   ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
    * 建议hostPath仅用在单个pod读写node上的文件，不要用在多个pod之间当互通的存储介质
    * 实例
       * `kubectl create -f 06、mongodb-pod-hostpath.yml`，在pod所在的node节点上目录/tmp/mongodb挂载到容器的目录/data/db
@@ -97,7 +97,7 @@ PersistentVolumes，PersistentVolumeClaims
       * `kubectl get pv`，查看创建的PV
       * `kubectl create -f 06、mongodb-pvc.yml`，创建pvc
       * `kubectl get pv`，查看创建的PV，发现PV的状态是Bound，如图：  
-        ![05、ingresstlstest.png](https://images.gitee.com/uploads/images/2019/0217/175953_0268f9eb_5849.png "05、ingresstlstest.png")
+        ![06、pvstatus.png](https://images.gitee.com/uploads/images/2019/0222/221452_b807ee93_5849.png "06、pvstatus.png")
           * ACCESS MODES的类型
               * RWO，ReadWriteOnce，只有一个node节点可以读写volume
               * ROX，ReadOnlyMany，多个node节点可以读volume
@@ -111,7 +111,7 @@ PersistentVolumes，PersistentVolumeClaims
           * `kubectl create -f 06、mongodb-pvc.yml`，再次创建pvc
           * `kubectl get pvc`，发现状态是Pending
           * `kubectl get pv`，发现状态是Released，而不是Available。这是因为在创建pv的时候，给的回收策略是Retain，如图：  
-            ![05、ingresstlstest.png](https://images.gitee.com/uploads/images/2019/0217/175953_0268f9eb_5849.png "05、ingresstlstest.png")
+            ![06、pvcstatus.png](https://images.gitee.com/uploads/images/2019/0222/221440_66226351_5849.png "06、pvcstatus.png")
       * 回收策略
           * Retain，当pvc删除的时候，不删除volume里的数据。要想使pv再次被绑定，需要手动删除pv，然后创建pv。如果删除pv，pv里指定的volume数据，你可以不删除，让下一个pod再次使用
           * Recycle，当pvc删除的时候，会删除volume里的数据，其他pvc可以再次绑定
@@ -121,8 +121,20 @@ PersistentVolumes，PersistentVolumeClaims
 StorageClass
   * PersistentVolumes可以隐藏开发人员对底层的存储，但是需要运维人员提前定义好。Kubernetes提供了一个更简便的方式。运维人员只需提前准备好PersistentVolume provisioner和定义好一个或多个StorageClass，开发人员在PVC里引用StorageClass，由Kubernetes根据StorageClass自动创建PersistentVolumes
   * Kubernetes为云厂商默认提供了provisioner，运维人员不用自己创建provisioners，但是如果自己部署Kubernetes集群，则需要提供provisioner，一般采用nfs
+  * 运维人员会根据不同的场景创建不同的StorageClass，如有的使用SSD，有的使用普通硬盘。由开发人员选择使用哪个StorageClass
+  * StorageClass和PersistentVolumes一样是集群级别的，不属于任何namespace
   * 实例
       * `kubectl create -f 06、storageclass-fast-hostpath.yml`，创建一个名为fast的StorageClass，使用k8s.io/minikube-hostpath provisioner
       * `kubectl create -f 06、mongodb-pvc-sc.yml`，创建一个pvc，绑定fast StorageClass
-      * 
+      * `kubectl get pvc mongodb-pvc-sc`，查看创建的pvc
+      * `kubectl get pv`，查看由StorageClass创建的pv
+  * 如果pvc中不指定StorageClass，会使用集群中默认的StorageClass。如果不想使用StorageClass，想手动指定pvc绑定的pv，可以设置StorageClass为""，如文件06、mongodb-pvc.yml
+  * `kubectl get sc`，获取集群中存在哪些StorageClass，哪个StorageClass的默认的，如图：  
+    ![06、sc.png](https://images.gitee.com/uploads/images/2019/0222/221506_737deaeb_5849.png "06、sc.png")
+  * `kubectl explain sc`，查看StorageClass的定义，可以指定reclaimPolicy，默认是Delete。`reclaimPolicy: Retain`
+  * 使用StorageClass的步骤：
+      1. 集群管理员（一般指运维）创建PersistentVolume provisioner
+      2. 集群管理员（一般指运维）创建一个或多个StorageClass，并指定哪个是默认的StorageClass
+      3. 开发人员创建PersistentVolumeClaims，引用提供的StorageClass，StorageClass查找引用的provisioner，provisioner根据pvc的请求创建一个pv，然后将创建的pv和pvc进行绑定
+      4. 开发人员声明pod时，引用PVC
       
