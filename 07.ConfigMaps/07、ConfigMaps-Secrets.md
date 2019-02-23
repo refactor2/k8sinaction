@@ -152,4 +152,6 @@ ConfigMaps
             }
             ```
           * sleep-interval文件的内容为25
-          * `kubectl create configmap fortune-config-files --from-file=fortune-config-file`
+          * `kubectl create configmap fortune-config-files --from-file=fortune-config-file`，从文件夹fortune-config-file创建configmap
+          * `kubectl get configmap fortune-config-files -o yaml`，查看fortune-config-files
+          * `kubectl create -f fortune-configmap-volume.yml`，创建pod，引用fortune-config-files
