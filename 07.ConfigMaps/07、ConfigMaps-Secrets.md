@@ -64,7 +64,7 @@ Kubernetes提供了ConfigMap来存储配置数据，不管你是否使用ConfigM
       * 构建镜像，上传到dockerhub
       * `docker run -t refactor2/fortune:args`，使用默认参数，10s执行一次fortune命令
       * `docker run -t refactor2/fortune:args 5`，修改参数，5s执行一次fortune命令，如图：  
-        ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+        ![docker-args.png](https://images.gitee.com/uploads/images/2019/0223/175958_e9ec7771_5849.png "docker-args.png")
   * 在Kubernetes里可以重写Dockerfile的ENTRYPOINT和CMD，类似于：
     ```
     kind: Pod
@@ -105,8 +105,8 @@ Kubernetes提供了ConfigMap来存储配置数据，不管你是否使用ConfigM
         ```
       * 添加Dockerfile文件，构建镜像refactor2/fortune:env，上传镜像
       * `kubectl create -f fortune-pod-env.yml`，创建pod
-      * `kubectl exec fortune-env -c html-generator env`，查看环境变量，如图：  
-        ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+      * `kubectl exec fortune-env -c html-generator env`，查看环境变量，如图：
+        ![pod-env.png](https://images.gitee.com/uploads/images/2019/0223/180007_fefcc755_5849.png "pod-env.png")
 
 ConfigMaps
   * ConfigMaps对象存储配置信息，应用程序无需直接读取ConfigMap，而是通过环境变量读取，ConfigMap的内容会被加载到环境变量里。
@@ -156,9 +156,9 @@ ConfigMaps
           * `kubectl get configmap fortune-config-files -o yaml`，查看fortune-config-files
           * `kubectl create -f fortune-configmap-volume.yml`，创建pod，引用fortune-config-files
           * `kubectl port-forward fortune-configmap-volume 8080:80`，发现已经gzip压缩了，如图：  
-            ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+            ![configmap-volume.png](https://images.gitee.com/uploads/images/2019/0223/175946_d3afb908_5849.png "configmap-volume.png")
           * `kubectl exec fortune-configmap-volume -c web-server ls /etc/nginx/conf.d`，进入容器里查看文件夹，发现两个文件，如图：  
-            ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+            ![pod-nginx.png](https://images.gitee.com/uploads/images/2019/0223/180019_ba0bd7b0_5849.png "pod-nginx.png")
           * 文件sleep-interval并没有实际作用
   * configMap volume暴露指定的文件，如上例的只想加载my-nginx-config.conf文件，`kubectl create -f fortune-configmap-volume-with-items.yml`，创建一个pod，使用fortune-config-files里的my-nginx-config.conf文件，指定路径的gzip.conf。执行`kubectl exec fortune-configmap-volume-with-items -c web-server ls /etc/nginx/conf.d`，发现只有gzip.conf文件
   * 特别注意，如果使用configMap volume挂载文件，会隐藏容器里自身的文件，如上例的容器文件夹/etc/nginx/conf.d里只有gzip.conf文件，容器本身的/etc/nginx/conf.d文件夹里的文件被隐藏了。可以通过subPath来实现即挂载文件，又不影响原来容器里的文件，如：
@@ -177,7 +177,7 @@ ConfigMaps
           * `kubectl exec fortune-configmap-volume -c web-server cat /etc/nginx/conf.d/my-nginx-config.conf`，查看文件内容，发现gzip已经变成off了，但是浏览器访问还是有`Content-Encoding: gzip`，这是因为nginx没有重新加载配置
           * `kubectl exec fortune-configmap-volume -c web-server -- nginx -s reload`，再次访问，发现就没有`Content-Encoding: gzip`了
       * 当configMap被更新时，对应的文件内容也会被更新，Kubernetes是通过symbolic links实现的。`kubectl exec -it fortune-configmap-volume -c web-server -- ls -lA /etc/nginx/conf.d`，如图：  
-        ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+        ![symbolic-links.png](https://images.gitee.com/uploads/images/2019/0223/180039_2c90906f_5849.png "symbolic-links.png")
       * 如果你是使用subPath来挂载，而不是将当configMap volume整个挂载，这时候configMap配置变更，并不会自动更新subPath挂载的文件
   * 使用configMap自动更新配置需要注意
       * 当你的应用程序不支持重新加载配置，这样会导致多个同时运行的副本会因配置的不同，可能产生一些问题。因为pod可能随时会被重建，新的pod会使用新的配置，老的pod会使用老的配置
@@ -188,7 +188,7 @@ Secrets
   * 在Kubernetes的master节点，一般指etcd。在1.7版本之前，etcd存储Secrets时是明文的，在1.7版本之后变成加密的了
   * 可以使用Secrets存储不敏感的信息，但是需要注意Secrets的存储大小被限制在1M以内
   * 容器在使用secret volume时，secret的值会被自动解密
-  * `kubectl describe pod fortune-configmap-volume`，可以看到pod的Volumes里有一个默认的token Secret：default-token-mn7jc。可以看到`/var/run/secrets/kubernetes.io/serviceaccount from default-token-mn7jc (ro)`，执行`kubectl exec fortune-configmap-volume -c html-generator ls /var/run/secrets/kubernetes.io/serviceaccount/`下有3个文件
+  * `kubectl describe pod fortune-configmap-volume`，可以看到pod的Volumes里有一个默认的token Secret：default-token-mn7jc。可以看到`/var/run/secrets/kubernetes.io/serviceaccount from default-token-mn7jc (ro)`，执行`kubectl exec fortune-configmap-volume -c html-generator ls /var/run/secrets/kubernetes.io/serviceaccount/`下有3个文件 
   * `kubectl get secrets`   
   * `kubectl describe secrets`
   * 实例
@@ -216,7 +216,8 @@ Secrets
         ```
       * `kubectl create -f fortune-pod-https.yml`，创建pod
       * `kubectl port-forward fortune-https 8443:443`，访问https://127.0.0.1:8443/
-      * `kubectl exec fortune-https -c web-server -- mount | grep certs`，可以看出Secrets是存在内存里的
+      * `kubectl exec fortune-https -c web-server -- mount | grep certs`，可以看出Secrets是存在内存里的，如图：  
+        ![pod-secrets.png](https://images.gitee.com/uploads/images/2019/0223/180030_ad1cc519_5849.png "pod-secrets.png")
   * 暴露Secrets到环境变量，代码如下：
     ```
     env:
@@ -236,4 +237,6 @@ image pull Secrets
   * 实例
       * `kubectl create secret docker-registry mydockerhubsecret --docker-username=yourdockername --docker-password=yourpassword --docker-email=youremail`，创建一个名为mydockerhubsecret的secret
       * 使用以前的dockerfile，创建一个镜像refactor2/fortuneprivate，上传到dockerhub，在dockerhub上把这个镜像标为私有
-      * 
+      * `kubectl create -f fortune-pod-private.yml`，创建pod，设置imagePullSecrets
+      * `kubectl get pod`，可以发现fortuneprivate正在运行，如果不指定imagePullSecrets，查看日志会报拉取镜像失败
+  * 如果在每一个pod上都指定imagePullSecrets会比较麻烦，可以通过把Secrets绑定到ServiceAccount上，这样使用这个ServiceAccount的pod会被自动添加上imagePullSecrets
