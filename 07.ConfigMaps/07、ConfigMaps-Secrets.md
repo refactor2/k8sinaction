@@ -119,3 +119,37 @@ ConfigMaps
       * `kubectl create configmap my-config --from-file=/path/to/dir`，可通过目录创建ConfigMap
       * `kubectl create configmap my-config --from-file=foo.json --from-file=bar=foobar.conf --from-file=config-opts/--from-literal=some=thing`
   * `kubectl create -f fortune-pod-env-configmap.yml`，创建一个pod，引用configmap
+  * 当pod引用的configmap不存在时，pod里容器将不会启动成功，如果你创建了丢失的configmap，启动失败的容器会重新启动，不用你重建pod
+  * 如果configmap的内容很多，手动指定env会比较烦，可以通过如下方式处理
+    ```
+    spec:
+    containers:
+    - image:some-image
+      envFrom:
+      - prefix: CONFIG_
+        configMapRef:
+          name: my-config-map
+    ```
+    如果my-config-map里有三个key，FOO，BAR，FOO-BAR，你可以通过envFrom将它们全部加载到环境变量里，并且使用前缀`CONFIG_`，前缀是可选的，如果不指定，默认取key名称。运行pod后，检查环境变量，会发现没有CONFIG_FOO-BAR，这是因为FOO-BAR不符合环境变量的命名规则，被跳过了
+  * 使用configmap为命令行参数赋值，`kubectl create -f fortune-pod-args-configmap.yml`
+  * configMap volume暴露每一个key做为一个文件
+      * 实例
+          * 新建一个文件夹fortune-config-file，里面包含两个文件my-nginx-config.conf，sleep-interval
+          * my-nginx-config.conf，开启gzip压缩，内容为：
+            ```
+            server {
+                listen              80;
+                server_name         www.kubia-example.com;
+
+                gzip on;
+                gzip_types text/plain application/xml;
+
+                location / {
+                    root   /usr/share/nginx/html;
+                    index  index.html index.htm;
+                }
+
+            }
+            ```
+          * sleep-interval文件的内容为25
+          * `kubectl create configmap fortune-config-files --from-file=fortune-config-file`
