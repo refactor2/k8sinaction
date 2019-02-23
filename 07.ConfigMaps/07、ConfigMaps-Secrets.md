@@ -62,3 +62,20 @@ Kubernetes提供了ConfigMap来存储配置数据，不管你是否使用ConfigM
         CMD ["10"]
         ```
       * 构建镜像，上传到dockerhub
+      * `docker run -t refactor2/fortune:args`，使用默认参数，10s执行一次fortune命令
+      * `docker run -t refactor2/fortune:args 5`，修改参数，5s执行一次fortune命令，如图：  
+        ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+  * 在Kubernetes里可以重写Dockerfile的ENTRYPOINT和CMD，类似于：
+    ```
+    kind: Pod
+    spec:
+        containers:
+        - image: some/image
+        command: ["/bin/command"]
+        args: ["arg1", "arg2", "arg3"]
+    ```
+    docker和在Kubernetes对应关系如下：  
+    docker    | Kubernetes | 描述
+    ----------|------------|-------
+    ENTRYPOINT| command    | 容器里执行的命令
+    CMD       | args       | 传给命令的参数
