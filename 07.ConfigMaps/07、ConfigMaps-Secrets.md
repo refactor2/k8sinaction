@@ -160,5 +160,80 @@ ConfigMaps
           * `kubectl exec fortune-configmap-volume -c web-server ls /etc/nginx/conf.d`，进入容器里查看文件夹，发现两个文件，如图：  
             ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
           * 文件sleep-interval并没有实际作用
-  * configMap volume暴露指定的文件
-      * 如上例的只想加载my-nginx-config.conf文件，`kubectl create -f fortune-configmap-volume-with-items.yml`，创建一个pod，使用fortune-config-files里的my-nginx-config.conf文件，指定路径的gzip.conf
+  * configMap volume暴露指定的文件，如上例的只想加载my-nginx-config.conf文件，`kubectl create -f fortune-configmap-volume-with-items.yml`，创建一个pod，使用fortune-config-files里的my-nginx-config.conf文件，指定路径的gzip.conf。执行`kubectl exec fortune-configmap-volume-with-items -c web-server ls /etc/nginx/conf.d`，发现只有gzip.conf文件
+  * 特别注意，如果使用configMap volume挂载文件，会隐藏容器里自身的文件，如上例的容器文件夹/etc/nginx/conf.d里只有gzip.conf文件，容器本身的/etc/nginx/conf.d文件夹里的文件被隐藏了。可以通过subPath来实现即挂载文件，又不影响原来容器里的文件，如：
+    ```
+    spec:
+      containers:
+      - image: some/image
+        volumeMounts:
+        - name: myvolume
+          mountPath: /etc/someconfig.conf
+          subPath: myconfig.conf
+    ```
+  * 使用环境变量和命令行参数的配置都不能在应用程序运行中被更改，使用configMap可以在不重建pod，并且不需要容器重启的情况下，更新配置。如果你更新了configMap，使用这个configMap的所有文件都会被更新，然后会告诉应用程序配置被改变了，然后重新加载配置。注意，从你更新configMap到引用configMap的文件被更新，需要比较长的时间，有可能需要1min
+      * 实例
+          * `kubectl edit configmap fortune-config-files`，把gzip由on改成off
+          * `kubectl exec fortune-configmap-volume -c web-server cat /etc/nginx/conf.d/my-nginx-config.conf`，查看文件内容，发现gzip已经变成off了，但是浏览器访问还是有`Content-Encoding: gzip`，这是因为nginx没有重新加载配置
+          * `kubectl exec fortune-configmap-volume -c web-server -- nginx -s reload`，再次访问，发现就没有`Content-Encoding: gzip`了
+      * 当configMap被更新时，对应的文件内容也会被更新，Kubernetes是通过symbolic links实现的。`kubectl exec -it fortune-configmap-volume -c web-server -- ls -lA /etc/nginx/conf.d`，如图：  
+        ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+      * 如果你是使用subPath来挂载，而不是将当configMap volume整个挂载，这时候configMap配置变更，并不会自动更新subPath挂载的文件
+  * 使用configMap自动更新配置需要注意
+      * 当你的应用程序不支持重新加载配置，这样会导致多个同时运行的副本会因配置的不同，可能产生一些问题。因为pod可能随时会被重建，新的pod会使用新的配置，老的pod会使用老的配置
+      * 当你的应用程序支持重新加载配置，你也要注意因为多个副本间重新加载配置的时间会相差比较久，也可能会产生一些问题
+
+Secrets
+  * Secrets和configMap用法类似。有一些比较敏感的信息需要使用Secrets来存储。Kubernetes通过只分发给需要访问的Secrets的pod所在的node节点上，并且使用内存来存储Secrets来保证Secrets的安全
+  * 在Kubernetes的master节点，一般指etcd。在1.7版本之前，etcd存储Secrets时是明文的，在1.7版本之后变成加密的了
+  * 可以使用Secrets存储不敏感的信息，但是需要注意Secrets的存储大小被限制在1M以内
+  * 容器在使用secret volume时，secret的值会被自动解密
+  * `kubectl describe pod fortune-configmap-volume`，可以看到pod的Volumes里有一个默认的token Secret：default-token-mn7jc。可以看到`/var/run/secrets/kubernetes.io/serviceaccount from default-token-mn7jc (ro)`，执行`kubectl exec fortune-configmap-volume -c html-generator ls /var/run/secrets/kubernetes.io/serviceaccount/`下有3个文件
+  * `kubectl get secrets`   
+  * `kubectl describe secrets`
+  * 实例
+      * `openssl genrsa -out https.key 2048`，创建一个私钥
+      * `openssl req -new -x509 -key https.key -out https.cert -days 3650 -subj /CN=www.refactor-example.com`，根据私钥创建证书
+      * 在证书和秘钥同级目录创建一个文件foo，内容为bar，仅为测试用
+      * `kubectl create secret generic fortune-https --from-file=https.key --from-file=https.cert --from-file=foo`，创建fortune-https secret
+      * `kubectl get secret fortune-https -o yaml`，会发现foo也被加密了
+      * `kubectl edit configmap fortune-config-files`，编辑configmap，支持tls，核心代码：
+        ```
+        server {
+            listen              80;
+            listen              443 ssl;
+            server_name         www.refactor-example.com;
+            ssl_certificate     certs/https.cert;
+            ssl_certificate_key certs/https.key;
+            ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+            ssl_ciphers         HIGH:!aNULL:!MD5;
+
+            location / {
+                root   /usr/share/nginx/html;
+                index  index.html index.htm;
+            }
+        }
+        ```
+      * `kubectl create -f fortune-pod-https.yml`，创建pod
+      * `kubectl port-forward fortune-https 8443:443`，访问https://127.0.0.1:8443/
+      * `kubectl exec fortune-https -c web-server -- mount | grep certs`，可以看出Secrets是存在内存里的
+  * 暴露Secrets到环境变量，代码如下：
+    ```
+    env:
+    - name: FOO_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: fortune-https
+            key: foo
+    ```
+    虽然Kubernetes支持将Secrets暴露给环境变量，但是不建议这样做。因为应用程序在崩溃时会dump环境变量信息，有的应用还会在启动时，把环境变量打到日志里，会造成敏感信息泄露；另外子进程会继承主进程所有的环境变量，如果你的应用运行了第三方的类库，也可能会造成敏感信息泄露
+
+image pull Secrets
+  * 私有镜像的拉取需要认证，当部署一个pod时，Kubernetes需要拉取镜像，如果是私有镜像，则Kubernetes需要提供证书
+  * 拉取私有镜像需要做两件事
+      * 创建一个Secret，存储Docker registry的证书
+      * 在pod定义时，在imagePullSecrets字段上引用创建的Secret
+  * 实例
+      * `kubectl create secret docker-registry mydockerhubsecret --docker-username=yourdockername --docker-password=yourpassword --docker-email=youremail`，创建一个名为mydockerhubsecret的secret
+      * 使用以前的dockerfile，创建一个镜像refactor2/fortuneprivate，上传到dockerhub，在dockerhub上把这个镜像标为私有
+      * 
