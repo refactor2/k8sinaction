@@ -104,3 +104,4 @@ Kubernetes提供了ConfigMap来存储配置数据，不管你是否使用ConfigM
         done
         ```
       * 添加Dockerfile文件，构建镜像refactor2/fortune:env，上传镜像
+      * `kubectl create -f fortune-pod-env.yml`，创建pod
