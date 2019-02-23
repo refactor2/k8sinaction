@@ -79,3 +79,28 @@ Kubernetes提供了ConfigMap来存储配置数据，不管你是否使用ConfigM
     ----------|------------|-------
     ENTRYPOINT| command    | 容器里执行的命令
     CMD       | args       | 传给命令的参数
+  * 实例
+      * `kubectl create -f fortune-pod-args.yml`，创建pod，修改参数，2s执行一次fortune命令
+      * `kubectl port-forward fortune3s 8080:80`，在本地暴露一个端口，打开浏览器http://127.0.0.1:8080访问
+      * `kubectl logs -c html-generator fortune3s`，查看pod fortune3s 容器 html-generator 的日志
+
+设置环境变量
+  * 和命令行参数一样，在pod被创建后，环境变量的值修改后，在pod里不会变
+  * 实例
+      * 添加fortuneloop-env.sh文件
+        ```
+        #!/bin/bash
+        trap "exit" SIGINT
+
+        echo Configured to generate new fortune every $INTERVAL seconds
+
+        mkdir -p /var/htdocs
+
+        while :
+        do
+        echo $(date) Writing fortune to /var/htdocs/index.html
+        /usr/games/fortune > /var/htdocs/index.html
+        sleep $INTERVAL
+        done
+        ```
+      * 添加Dockerfile文件，构建镜像refactor2/fortune:env，上传镜像
