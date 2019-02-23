@@ -155,3 +155,10 @@ ConfigMaps
           * `kubectl create configmap fortune-config-files --from-file=fortune-config-file`，从文件夹fortune-config-file创建configmap
           * `kubectl get configmap fortune-config-files -o yaml`，查看fortune-config-files
           * `kubectl create -f fortune-configmap-volume.yml`，创建pod，引用fortune-config-files
+          * `kubectl port-forward fortune-configmap-volume 8080:80`，发现已经gzip压缩了，如图：  
+            ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+          * `kubectl exec fortune-configmap-volume -c web-server ls /etc/nginx/conf.d`，进入容器里查看文件夹，发现两个文件，如图：  
+            ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+          * 文件sleep-interval并没有实际作用
+  * configMap volume暴露指定的文件
+      * 如上例的只想加载my-nginx-config.conf文件，`kubectl create -f fortune-configmap-volume-with-items.yml`，创建一个pod，使用fortune-config-files里的my-nginx-config.conf文件，指定路径的gzip.conf
