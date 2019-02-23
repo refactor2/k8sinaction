@@ -18,4 +18,47 @@ Kubernetes提供了ConfigMap来存储配置数据，不管你是否使用ConfigM
       * ENTRYPOINT dotnet netcorek8s.dll，使用shell来运行dotnet
       * 可以通过进入容器里，执行命令`ps x`来查看进程情况，如：`docker exec 4675d ps x`
   * 实例
-      * 
+      * 添加fortuneloop-args.sh文件
+        ```
+        #!/bin/bash
+        trap "exit" SIGINT
+
+        INTERVAL=$1
+        echo Configured to generate new fortune every $INTERVAL seconds
+
+        mkdir -p /var/htdocs
+
+        while :
+        do
+        echo $(date) Writing fortune to /var/htdocs/index.html
+        /usr/games/fortune > /var/htdocs/index.html
+        sleep $INTERVAL
+        done
+        ```
+      * 添加Dockerfile文件
+        ```
+        FROM ubuntu:16.04
+        # Ali apt-get source.list
+        RUN mv /etc/apt/sources.list /etc/apt/sources.list.bak && \
+            echo "deb http://mirrors.aliyun.com/ubuntu/ xenial main" >/etc/apt/sources.list && \
+            echo "deb-src http://mirrors.aliyun.com/ubuntu/ xenial main" >>/etc/apt/sources.list && \
+            echo "deb http://mirrors.aliyun.com/ubuntu/ xenial-updates main" >>/etc/apt/sources.list && \
+            echo "deb-src http://mirrors.aliyun.com/ubuntu/ xenial-updates main" >>/etc/apt/sources.list && \
+            echo "deb http://mirrors.aliyun.com/ubuntu/ xenial universe" >>/etc/apt/sources.list && \
+            echo "deb-src http://mirrors.aliyun.com/ubuntu/ xenial universe" >>/etc/apt/sources.list && \
+            echo "deb http://mirrors.aliyun.com/ubuntu/ xenial-updates universe" >>/etc/apt/sources.list && \
+            echo "deb-src http://mirrors.aliyun.com/ubuntu/ xenial-updates universe" >>/etc/apt/sources.list && \
+            echo "deb http://mirrors.aliyun.com/ubuntu/ xenial-security main" >>/etc/apt/sources.list && \
+            echo "deb-src http://mirrors.aliyun.com/ubuntu/ xenial-security main" >>/etc/apt/sources.list && \
+            echo "deb http://mirrors.aliyun.com/ubuntu/ xenial-security universe" >>/etc/apt/sources.list && \
+            echo "deb-src http://mirrors.aliyun.com/ubuntu/ xenial-security universe" >>/etc/apt/sources.list 
+
+        RUN apt-get update ; apt-get -y install fortune
+        ADD fortuneloop-args.sh /bin/fortuneloop.sh
+        RUN chmod +x /bin/fortuneloop.sh
+        # RUN mkdir /var/htdocs
+
+        ENTRYPOINT ["/bin/fortuneloop.sh"]
+        CMD ["10"]
+        ```
+      * 构建镜像，上传到dockerhub
