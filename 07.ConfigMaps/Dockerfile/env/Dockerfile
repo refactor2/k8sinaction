@@ -20,4 +20,3 @@ RUN chmod +x /bin/fortuneloop.sh
 # RUN mkdir /var/htdocs
 
 ENTRYPOINT ["/bin/fortuneloop.sh"]
-CMD ["10"]
