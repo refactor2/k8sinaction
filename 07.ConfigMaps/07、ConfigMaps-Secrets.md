@@ -105,3 +105,17 @@ Kubernetes提供了ConfigMap来存储配置数据，不管你是否使用ConfigM
         ```
       * 添加Dockerfile文件，构建镜像refactor2/fortune:env，上传镜像
       * `kubectl create -f fortune-pod-env.yml`，创建pod
+      * `kubectl exec fortune-env -c html-generator env`，查看环境变量，如图：  
+        ![06、minikubehostpath.png](https://images.gitee.com/uploads/images/2019/0222/221332_1f84f61b_5849.png "06、minikubehostpath.png")
+
+ConfigMaps
+  * ConfigMaps对象存储配置信息，应用程序无需直接读取ConfigMap，而是通过环境变量读取，ConfigMap的内容会被加载到环境变量里。
+  * 可以在不同环境（qa，test，stage，product）里定义一个名称相同的ConfigMaps，但是ConfigMaps里的内容根据环境的变化而变化。pod引用ConfigMaps是通过名称，这样达到了在不同环境使用同一份pod定义
+  * 创建ConfigMap的几种方式
+      * `kubectl create configmap fortune-config --from-literal=sleep-interval=25`，创建名称为fortune-config的ConfigMap，来源是文本串，key是sleep-interval，value 是25
+      * `kubectl create configmap myconfigmap --from-literal=foo=bar --from-literal=bar=baz --from-literal=one=two`，可以指定多个
+      * `kubectl create configmap my-config --from-file=config-file.conf`，可以通过文件创建ConfigMap，在执行kubectl命令的目录里找到config-file.conf，key为文件名称
+      * `kubectl create configmap my-config --from-file=customkey=config-file.conf`，可以指定key为customkey
+      * `kubectl create configmap my-config --from-file=/path/to/dir`，可通过目录创建ConfigMap
+      * `kubectl create configmap my-config --from-file=foo.json --from-file=bar=foobar.conf --from-file=config-opts/--from-literal=some=thing`
+  * `kubectl create -f fortune-pod-env-configmap.yml`，创建一个pod，引用configmap
