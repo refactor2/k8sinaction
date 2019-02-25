@@ -70,9 +70,9 @@ Downward API
             /kubectl proxy --server="$API_SERVER" --certificate-authority="$CA_CRT" --token="$TOKEN" --accept-paths='^.*'
             ```
         * 准备好kubectl文件，需要翻墙下载，可使用我下载好的文件，[下载地址](https://dl.k8s.io/v1.10.0/kubernetes-client-linux-amd64.tar.gz)
-        * 构建镜像kubectl-proxy:1.10.0，上传至dockerhub
+        * 构建镜像refactor2/kubectl-proxy:1.10.0，上传至dockerhub
         * `kubectl create -f curl-with-proxy.yml`，创建一个pod，包含两个容器
-        * `kubectl exec -it curl-with-proxy -c main bash`，进入容器内部，执行`curl localhost:8001`，如图：  
+        * `kubectl exec -it curl-with-proxy -c main bash`，进入容器内部，执行`curl localhost:8001`，如图： 
             ![pod-proxy.png](https://images.gitee.com/uploads/images/2019/0225/214129_0ea5b49d_5849.png "pod-proxy.png")
 
 
