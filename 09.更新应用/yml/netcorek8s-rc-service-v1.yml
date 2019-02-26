@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: netcorek8src-v1
+spec:
+  replicas: 3
+  selector:
+    app: netcorek8s
+  template:
+    metadata:
+      labels:
+        app: netcorek8s
+    spec:
+      containers:
+      - name: netcorek8s
+        image: refactor2/netcorek8s:v1
+        ports:
+        - containerPort: 43300
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: netcorek8ssvc-nodeport
+spec:
+  type: NodePort
+  ports:
+  - port: 13300
+    targetPort: 43300
+    nodePort: 32001
+  selector:
+    app: netcorek8s

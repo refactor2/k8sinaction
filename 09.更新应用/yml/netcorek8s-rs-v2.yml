@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: netcorek8srs-v2
+spec:
+  replicas: 3
+  selector:
+    matchExpressions: 
+      - {key: apprs, operator: In, values: [netcorek8s-v2]}
+  template:
+    metadata:
+      labels:
+        apprs: netcorek8s-v2
+    spec:
+      containers:
+      - name: netcorek8s
+        image: refactor2/netcorek8s:v2
+        ports:
+        - containerPort: 43300

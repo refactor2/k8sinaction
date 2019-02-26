@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netcorek8s-deployment
+  labels:
+    app: netcorek8s
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: netcorek8s
+  template:
+    metadata:
+      labels:
+        app: netcorek8s
+    spec:
+      containers:
+      - name: netcorek8s
+        image: refactor2/netcorek8s:v1
+        ports:
+        - containerPort: 43300

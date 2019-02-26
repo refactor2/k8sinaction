@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netcorek8s-deployment
+  labels:
+    app: netcorek8s
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: netcorek8s
+  minReadySeconds: 10
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: netcorek8s
+    spec:
+      containers:
+      - image: refactor2/netcorek8s:v2
+        name: netcorek8s
+        readinessProbe:
+          periodSeconds: 1
+          httpGet:
+            path: /health
+            port: 43300
