@@ -19,4 +19,21 @@ RBAC
       * `kubectl run test --image=refactor2/kubectl-proxy:1.10.0 -n bar`，名foo namespace里创建一个deployment
       * `kubectl get pod -n foo`，在另一个终端中执行`kubectl get pod -n bar`，查找到pod
       * `kubectl exec -it test-5d565d7dcc-2k49t -n foo sh`，进入容器内部，`apk add --no-cache curl`，先安装curl，`curl localhost:8001/api/v1/namespaces/foo/services`，提示services is forbidden，可见RBAC起作用了，默认的ServiceAccount不允许查找和修改资源
-  
+      * `kubectl create -f service-reader.yml -n foo`，创建一个读取service的Role。类似命令`kubectl create role service-reader --verb=get --verb=list  --resource=services -n bar`
+      * `kubectl create rolebinding test --role=service-reader --serviceaccount=foo:default -n foo`，绑定角色
+      * 再次进入容器内部，发现可以访问services资源
+      * `kubectl edit rolebinding test -n foo`，编辑角色绑定，绑定bar namespace的serviceaccount，这样可以在bar namespace的pod可以访问foo的service，添加如下代码：
+        ```
+        subjects:
+        - kind: ServiceAccount
+          name: default 
+          namespace: bar 
+        ```  
+  * ClusterRole只能使用ClusterRoleBinding来绑定，实例如下：
+      * `kubectl create clusterrole pv-reader --verb=get,list --resource=persistentvolumes`，创建一个clusterrole，读取persistentvolumes资源
+      * `kubectl create clusterrolebinding pv-test --clusterrole=pv-reader --serviceaccount=foo:default`，绑定
+      * `curl localhost:8001/api/v1/persistentvolumes`，验证
+  * 查看系统角色
+      * `kubectl get clusterrole system:discovery -o yaml`，`kubectl get clusterrolebinding system:discovery -o yaml`
+      * `kubectl get clusterrolebindings`，`kubectl get clusterroles`
+
